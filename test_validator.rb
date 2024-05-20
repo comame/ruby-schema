@@ -62,4 +62,38 @@ class ValidatorTest < Test::Unit::TestCase
     assert !v.validate([])
     assert !v.validate(2)
   end
+
+  def test_validateNil
+    v = V.nil
+    assert v.validate(nil)
+    assert !v.validate(false)
+  end
+
+  def test_validateHash
+    v = V.hash({
+      'string_key' => V.string,
+      :symbol_key => V.string,
+      3 => V.string,
+      3.14 => V.string,
+    })
+    assert v.validate({
+      'string_key' => 'value',
+      :symbol_key => 'value',
+      3 => 'value',
+      3.14 => 'value'
+    })
+    assert v.validate({
+      'string_key' => 'value',
+      :symbol_key => 'value',
+      3 => 'value',
+      3.14 => 'value',
+      'other_key' => 'aaa'
+    })
+    assert !v.validate({})
+    assert !v.validate({
+      :symbol_key => 'value',
+      3 => 'value',
+      3.14 => 'value'
+    })
+  end
 end
