@@ -1,0 +1,16 @@
+name: Test
+on: [ push, pull_request ]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        ruby-version: ['3.3']
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ruby/setup-ruby
+        with:
+          ruby-version: ${{ matrix.ruby-version }}
+          bundler-cache: true
+      - run: bundle install
+      - run: bundle exec ruby test_validator.rb
