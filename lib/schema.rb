@@ -1,4 +1,4 @@
-class V
+class S
   def self.int()
     self.new :int
   end
@@ -23,6 +23,10 @@ class V
     self.new :any
   end
 
+  def self.nil()
+    self.new :nil
+  end
+
   def self.array_of(schema)
     if schema.class != self
       raise ArgumentError, 'ínvalid schema'
@@ -45,6 +49,14 @@ class V
     self.new :tuple, schemas
   end
 
+  def self.hash(schema)
+    if schema.class != Hash
+      raise ArgumentError, 'invalid schema'
+    end
+
+    self.new :hash, schema
+  end
+
   def validate(v)
     valid_value_type? @kind, v
   end
@@ -61,12 +73,15 @@ class V
     if k == :tuple
       @tuple = s
     end
+    if k == :hash
+      @hash = s
+    end
   end
 
   private def valid_value_type?(k, v)
     case k
     when :any
-      t = [Integer, Float, String, Symbol, TrueClass, FalseClass, Array, Hash]
+      t = [Integer, Float, String, Symbol, TrueClass, FalseClass, Array, Hash, NilClass]
       t.include? v.class
     when :int
       v.class == Integer
@@ -79,16 +94,20 @@ class V
     when :bool
       t = [TrueClass, FalseClass]
       t.include? v.class
+    when :nil
+      v.class == NilClass
     when :array_of
-      is_array_of?(@array_of, v)
+      array_of?(@array_of, v)
     when :tuple
-      is_tuple?(@tuple, v)
+      tuple?(@tuple, v)
+    when :hash
+      hash?(@hash, v)
     else
       raise ArgumentError, sprintf('ínvalid kind %s', k)
     end
   end
 
-  private def is_array_of?(schema, value)
+  private def array_of?(schema, value)
     if value.class != Array
       return false
     end
@@ -102,7 +121,7 @@ class V
     return true
   end
 
-  private def is_tuple?(schema, value)
+  private def tuple?(schema, value)
     if value.class != Array
       return false
     end
@@ -113,6 +132,34 @@ class V
 
     for i in 0...schema.length do
       if !schema[i].validate(value[i])
+        return false
+      end
+    end
+
+    return true
+  end
+
+  private def hash?(schema, value)
+    if value.class != Hash
+      return false
+    end
+
+    skeys = schema.keys
+    vkeys = value.keys
+
+    if skeys.length > vkeys.length
+      return false
+    end
+
+    # value が schema よりも広いことを認めるために、すべての schema.keys が value.keys に含まれることだけを確認する
+    for sk in skeys
+      if !vkeys.include? sk
+        return false
+      end
+    end
+
+    for sk in skeys
+      if !schema[sk].validate(value[sk])
         return false
       end
     end
